@@ -1,6 +1,9 @@
 #include <stdio.h>
 #include <conio.h>
 #include <cc65.h>
+#include <cbm.h>
+#include <mouse.h>
+#include <string.h>
 
 #include <peekpoke.h>
 
@@ -13,7 +16,41 @@
 #define CHAR_RAM 0x0400
 #define COLOUR_RAM 0xD800
 
+#define step_size 2
+
 #define baseline 12
+#define tail_length 10
+
+#define SPRITE0_DATA    0x0340
+#define SPRITE0_PTR     0x07F8
+#define DRIVER          "c64-pot.mou"
+
+/* The mouse sprite (an arrow) */
+static const unsigned char CursorSprite[64] = {
+    0x00, 0x00, 0x00,
+    0x00, 0x00, 0x00,
+    0x00, 0x00, 0x00,
+    0x0F, 0xE0, 0x00,
+    0x0F, 0xC0, 0x00,
+    0x0F, 0x80, 0x00,
+    0x0F, 0xC0, 0x00,
+    0x0D, 0xE0, 0x00,
+    0x08, 0xF0, 0x00,
+    0x00, 0x78, 0x00,
+    0x00, 0x3C, 0x00,
+    0x00, 0x1E, 0x00,
+    0x00, 0x0F, 0x00,
+    0x00, 0x07, 0x80,
+    0x00, 0x03, 0x80,
+    0x00, 0x00, 0x00,
+    0x00, 0x00, 0x00,
+    0x00, 0x00, 0x00,
+    0x00, 0x00, 0x00,
+    0x00, 0x00, 0x00,
+    0x00, 0x00, 0x00,
+    0x00
+};
+
 
 unsigned char level = 1;
 
@@ -45,36 +82,53 @@ int main(void) {
 
 	//unsigned char block[8] = {0xA0, 0xBB, 0xAC	}
 	unsigned long time_step, time_now;
-	unsigned char x,xp1;
+	unsigned char x,xp1,xt;
 	unsigned char y, yp1,y2;
 	unsigned char wx,wxp1;
 	unsigned char colour;
-	unsigned char step_size = 1;
 	unsigned short offset;
+	unsigned char tail[tail_length][2];
+	unsigned char tail_ptr, tail_ptr2;
 
 	unsigned short deg;
 	
 
-	time_step=(PEEK(160)*65536)+(PEEK(161)*256+PEEK(162))+step_size;
+	memcpy ((void*) SPRITE0_DATA, CursorSprite, sizeof (CursorSprite));
+
+
+	/* Load and install the mouse driver */
+	mouse_load_driver (&mouse_def_callbacks, DRIVER);
+	/* Set the VIC sprite pointer */
+    *(unsigned char*)SPRITE0_PTR = SPRITE0_DATA / 64;
+
+    VIC.spr0_color = COLOR_WHITE;
+
+  	mouse_show();
+  	mouse_move (30 , 30);
+
+
 
 	offset = 0;
 	colour = 1;
 	x=0;
-	xp1=1;
+	xp1=0;
 
 	POKE(0xC7 , 0x12);//Reverse on
+	clrscr();
 	bgcolor(0);
+  	bordercolor(0);
 
 	while(1){
+		time_step=(PEEK(160)*65536)+(PEEK(161)*256+PEEK(162))+step_size;
+
 		//y=wave(x);
 		//yp1=wave(xp1);
-		textcolor(0);
+		//textcolor(0);
 
 		//gotoxy(x-1,y);
 		//putchar(0xA0);
 		//0-360
-		xp1=xp1+2;
-		if(xp1>40){xp1=0;}
+
 		//deg=(xp1/40)*360;
 
 		deg=xp1*9;
@@ -82,6 +136,11 @@ int main(void) {
 
 		}
 		y = cc65_sin(deg)/36 + baseline;
+		
+		tail[tail_ptr][0] = x;
+		tail[tail_ptr][1] = y;
+
+
 		//gotoxy(20,20);
 		//printf("         ");
 		//printf("y:%d",y);
@@ -91,6 +150,26 @@ int main(void) {
 
 		gotoxy(x,y);
 		putchar(0xA0);
+
+
+		//for(n=0;n<tail_length;n++){
+			textcolor(0);
+			tail_ptr2 = tail_length - tail_ptr;
+
+			gotoxy(tail[tail_ptr2][0], tail[tail_ptr2][1]);
+			putchar(0xA0);
+
+			//textcolor(1);
+			//gotoxy(2,2);
+			//printf("         ");
+			//printf("x:%d y:%d",tail[tail_ptr2][0],tail[tail_ptr2][1]);
+		//}
+
+		++tail_ptr;
+		if(tail_ptr>tail_length){
+			tail_ptr = 0;
+		}
+
 		
 		POKE(0xC7 , 0);//Reverse off
 
@@ -98,6 +177,10 @@ int main(void) {
 		gotoxy(x,baseline);
 		putchar(0xC0);
 		POKE(0xC7 , 0x12);//Reverse on
+
+
+
+
 
 		/*y2=y;
 		if(y>baseline){
@@ -199,12 +282,14 @@ int main(void) {
 
 		//putc(block[i]);
 
+		time_now = (PEEK(160)*65536)+(PEEK(161)*256+PEEK(162));
 
-		/*while(time_now<time_step){
+		while(time_now<time_step){
 			time_now = (PEEK(160)*65536)+(PEEK(161)*256+PEEK(162));
-		}*/
+		}
 
-
+		xp1=xp1+1;
+		if(xp1>39){xp1=0;}
 
 		x=x+1;
 		//xp1=x+1;

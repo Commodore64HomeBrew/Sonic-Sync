@@ -4,6 +4,7 @@
 #include <cbm.h>
 #include <mouse.h>
 #include <string.h>
+#include "vickers.h"
 
 #include <peekpoke.h>
 
@@ -16,39 +17,29 @@
 #define CHAR_RAM 0x0400
 #define COLOUR_RAM 0xD800
 
-#define step_size 2
+#define step_size 3
 
 #define baseline 12
 #define tail_length 10
+#define delta_x 30
+#define delta_y 30
 
 #define SPRITE0_DATA    0x0340
 #define SPRITE0_PTR     0x07F8
 #define DRIVER          "c64-pot.mou"
 
+struct mouse_info mouse;
+
 /* The mouse sprite (an arrow) */
 static const unsigned char CursorSprite[64] = {
-    0x00, 0x00, 0x00,
-    0x00, 0x00, 0x00,
-    0x00, 0x00, 0x00,
-    0x0F, 0xE0, 0x00,
-    0x0F, 0xC0, 0x00,
-    0x0F, 0x80, 0x00,
-    0x0F, 0xC0, 0x00,
-    0x0D, 0xE0, 0x00,
-    0x08, 0xF0, 0x00,
-    0x00, 0x78, 0x00,
-    0x00, 0x3C, 0x00,
-    0x00, 0x1E, 0x00,
-    0x00, 0x0F, 0x00,
-    0x00, 0x07, 0x80,
-    0x00, 0x03, 0x80,
-    0x00, 0x00, 0x00,
-    0x00, 0x00, 0x00,
-    0x00, 0x00, 0x00,
-    0x00, 0x00, 0x00,
-    0x00, 0x00, 0x00,
-    0x00, 0x00, 0x00,
-    0x00
+0x00,0x28,0x00,0x00,0x96,0x00,0x02,0x69,
+0x80,0x09,0xbe,0x60,0x26,0xeb,0x98,0x9b,
+0xaa,0xe6,0x9b,0x96,0xe6,0x9b,0x96,0xe6,
+0x9b,0x96,0xe6,0x9b,0x96,0xe6,0x9b,0x96,
+0xe6,0x9b,0x96,0xe6,0x9b,0x96,0xe6,0x9b,
+0x96,0xe6,0x9b,0x96,0xe6,0x9b,0xaa,0xe6,
+0x26,0xeb,0x98,0x09,0xbe,0x60,0x02,0x69,
+0x80,0x00,0x96,0x00,0x00,0x28,0x00,0x86
 };
 
 
@@ -82,7 +73,7 @@ int main(void) {
 
 	//unsigned char block[8] = {0xA0, 0xBB, 0xAC	}
 	unsigned long time_step, time_now;
-	unsigned char x,xp1,xt;
+	unsigned char x,xp1,xt,x2;
 	unsigned char y, yp1,y2;
 	unsigned char wx,wxp1;
 	unsigned char colour;
@@ -91,6 +82,7 @@ int main(void) {
 	unsigned char tail_ptr, tail_ptr2;
 
 	unsigned short deg;
+	unsigned short hits=0;
 	
 
 	memcpy ((void*) SPRITE0_DATA, CursorSprite, sizeof (CursorSprite));
@@ -101,22 +93,59 @@ int main(void) {
 	/* Set the VIC sprite pointer */
     *(unsigned char*)SPRITE0_PTR = SPRITE0_DATA / 64;
 
+  	VIC.bgcolor[0] = 1;
+
+
+
     VIC.spr0_color = COLOR_WHITE;
 
+	VIC.spr_mcolor0 = COLOR_BLUE;
+	VIC.spr_mcolor1 = COLOR_PURPLE;
+
+	//Player 1 colour:
+	//VIC.spr0_color = COLOR_RED;
+
+
+
+	//VIC.spr_mcolor = Spr_EnableBit[0];
+	//VIC.spr_ena = Spr_EnableBit[0];
+  VIC.spr_mcolor = Spr_EnableBit[0];
+  VIC.spr_mcolor = Spr_EnableBit[1];
+  VIC.spr_mcolor = Spr_EnableBit[2];
+  VIC.spr_mcolor = Spr_EnableBit[3];
+
+  VIC.spr_mcolor = Spr_EnableBit[4];
+  VIC.spr_mcolor = Spr_EnableBit[5];
+  VIC.spr_mcolor = Spr_EnableBit[6];
+  VIC.spr_mcolor = Spr_EnableBit[8];
+
+  VIC.spr_ena = Spr_EnableBit[0];
+  VIC.spr_ena = Spr_EnableBit[1];
+  VIC.spr_ena = Spr_EnableBit[2];
+  VIC.spr_ena = Spr_EnableBit[3];
+
+  VIC.spr_ena = Spr_EnableBit[4];
+  VIC.spr_ena = Spr_EnableBit[5];
+  VIC.spr_ena = Spr_EnableBit[6];
+  VIC.spr_ena = Spr_EnableBit[8];
+
+
   	mouse_show();
-  	mouse_move (30 , 30);
+  	mouse_move (100 , 160);
 
-
+  	//VIC.spr0_x;
+  	//VIC.spr0_y;
 
 	offset = 0;
 	colour = 1;
 	x=0;
 	xp1=0;
 
-	POKE(0xC7 , 0x12);//Reverse on
+	//POKE(0xC7 , 0x12);//Reverse on
 	clrscr();
 	bgcolor(0);
   	bordercolor(0);
+  	textcolor(0);
 
 	while(1){
 		time_step=(PEEK(160)*65536)+(PEEK(161)*256+PEEK(162))+step_size;
@@ -140,6 +169,8 @@ int main(void) {
 		tail[tail_ptr][0] = x;
 		tail[tail_ptr][1] = y;
 
+  		//VIC.spr0_x = x;
+  		//VIC.spr0_y = y;
 
 		//gotoxy(20,20);
 		//printf("         ");
@@ -149,7 +180,7 @@ int main(void) {
 		
 
 		gotoxy(x,y);
-		putchar(0xA0);
+		putchar(0xD1);
 
 
 		//for(n=0;n<tail_length;n++){
@@ -170,17 +201,39 @@ int main(void) {
 			tail_ptr = 0;
 		}
 
-		
+		/*
 		POKE(0xC7 , 0);//Reverse off
 
 		//baseline x axis
 		gotoxy(x,baseline);
 		putchar(0xC0);
 		POKE(0xC7 , 0x12);//Reverse on
+		*/
 
+        mouse_info (&mouse);
+        //gotoxy (0, 2);
+        //cprintf (" X  = %3d\r\n", mouse.pos.x);
+        //cprintf (" Y  = %3d\r\n", mouse.pos.y);
 
+        x2=x*8;
+        y2=y*8;
+		if((mouse.pos.x < x2+delta_x && mouse.pos.x > x2-delta_x)){
+			if((mouse.pos.y < y2+delta_y && mouse.pos.y > y2-delta_y)){
+				++hits;
+		        gotoxy (0, 23);
+		        textcolor(1);
+		        cprintf ("hits = %d\r\n", hits);
 
+				bordercolor(colour);
 
+			}
+			else{
+				bordercolor(0);
+			}
+		}
+		else{
+			bordercolor(0);
+		}
 
 		/*y2=y;
 		if(y>baseline){
@@ -296,7 +349,7 @@ int main(void) {
 		if(x>39){
 			x=0;
 			colour++;
-			if(colour>15){colour=0;}
+			if(colour>15){colour=1;}
 		}
 	}
 

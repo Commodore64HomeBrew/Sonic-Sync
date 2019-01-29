@@ -26,7 +26,8 @@
 
 #define SPRITE0_DATA    0x0340
 #define SPRITE0_PTR     0x07F8
-#define DRIVER          "c64-pot.mou"
+//#define DRIVER          "c64-pot.mou"
+#define DRIVER          "c64-1351.mou"
 
 struct mouse_info mouse;
 
@@ -81,7 +82,7 @@ int main(void) {
 	unsigned char tail[tail_length][2];
 	unsigned char tail_ptr, tail_ptr2;
 
-	unsigned short deg;
+	unsigned short deg,deg2,mod,mod1,mod2;
 	unsigned short hits=0;
 	
 
@@ -96,38 +97,30 @@ int main(void) {
   	VIC.bgcolor[0] = 1;
 
 
-
     VIC.spr0_color = COLOR_WHITE;
-
 	VIC.spr_mcolor0 = COLOR_BLUE;
 	VIC.spr_mcolor1 = COLOR_PURPLE;
 
-	//Player 1 colour:
-	//VIC.spr0_color = COLOR_RED;
 
+	VIC.spr_mcolor = Spr_EnableBit[0];
+	VIC.spr_mcolor = Spr_EnableBit[1];
+	VIC.spr_mcolor = Spr_EnableBit[2];
+	VIC.spr_mcolor = Spr_EnableBit[3];
 
+	VIC.spr_mcolor = Spr_EnableBit[4];
+	VIC.spr_mcolor = Spr_EnableBit[5];
+	VIC.spr_mcolor = Spr_EnableBit[6];
+	VIC.spr_mcolor = Spr_EnableBit[8];
 
-	//VIC.spr_mcolor = Spr_EnableBit[0];
-	//VIC.spr_ena = Spr_EnableBit[0];
-  VIC.spr_mcolor = Spr_EnableBit[0];
-  VIC.spr_mcolor = Spr_EnableBit[1];
-  VIC.spr_mcolor = Spr_EnableBit[2];
-  VIC.spr_mcolor = Spr_EnableBit[3];
+	VIC.spr_ena = Spr_EnableBit[0];
+	VIC.spr_ena = Spr_EnableBit[1];
+	VIC.spr_ena = Spr_EnableBit[2];
+	VIC.spr_ena = Spr_EnableBit[3];
 
-  VIC.spr_mcolor = Spr_EnableBit[4];
-  VIC.spr_mcolor = Spr_EnableBit[5];
-  VIC.spr_mcolor = Spr_EnableBit[6];
-  VIC.spr_mcolor = Spr_EnableBit[8];
-
-  VIC.spr_ena = Spr_EnableBit[0];
-  VIC.spr_ena = Spr_EnableBit[1];
-  VIC.spr_ena = Spr_EnableBit[2];
-  VIC.spr_ena = Spr_EnableBit[3];
-
-  VIC.spr_ena = Spr_EnableBit[4];
-  VIC.spr_ena = Spr_EnableBit[5];
-  VIC.spr_ena = Spr_EnableBit[6];
-  VIC.spr_ena = Spr_EnableBit[8];
+	VIC.spr_ena = Spr_EnableBit[4];
+	VIC.spr_ena = Spr_EnableBit[5];
+	VIC.spr_ena = Spr_EnableBit[6];
+	VIC.spr_ena = Spr_EnableBit[8];
 
 
   	mouse_show();
@@ -142,6 +135,8 @@ int main(void) {
 	xp1=0;
 
 	//POKE(0xC7 , 0x12);//Reverse on
+	//POKE(0xC7 , 0x12);//Graphics mode
+	POKE( 53272,21);//UPPER CASE/PETSCII MODE
 	clrscr();
 	bgcolor(0);
   	bordercolor(0);
@@ -166,6 +161,24 @@ int main(void) {
 		}
 		y = cc65_sin(deg)/36 + baseline;
 		
+		deg2= (deg + (xp1+1)*9)/2;
+
+		//y1 = cc65_sin(deg1)/36 + baseline;
+		y2 = cc65_sin(deg2)/36 + baseline;
+
+		mod1 = y % 2;
+		mod2 = y2 % 2;
+        gotoxy (0, 2);
+        textcolor(3);
+        cprintf ("mod1: %d mod2: %d\r\n", mod1,mod2);
+
+		if(mod1==2){bgcolor(1);}
+
+			
+
+		mod=mod1+mod2;
+
+
 		tail[tail_ptr][0] = x;
 		tail[tail_ptr][1] = y;
 
@@ -180,7 +193,62 @@ int main(void) {
 		
 
 		gotoxy(x,y);
-		putchar(0xD1);
+		//putchar(0xD1);
+
+
+
+		if(y>y2){
+			POKE(0xC7 , 0x12);//Reverse on
+			putchar(0xBF);
+			POKE(0xC7 , 0);//Reverse off
+		}
+		else if(y<y2){
+			putchar(0xBF);
+		}
+		else{
+			if(yp1>y){
+				//putchar(0xE2);
+				POKE(0xC7 , 0x12);//Reverse on
+				putchar(0xBF);
+				POKE(0xC7 , 0);//Reverse off
+
+			}
+			else{
+				putchar(0xBF);
+				//POKE(0xC7 , 0x12);//Reverse on
+				//putchar(0xE2);
+				//POKE(0xC7 , 0);//Reverse off
+			}
+		}
+
+
+		yp1=y;
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 		//for(n=0;n<tail_length;n++){
@@ -188,7 +256,7 @@ int main(void) {
 			tail_ptr2 = tail_length - tail_ptr;
 
 			gotoxy(tail[tail_ptr2][0], tail[tail_ptr2][1]);
-			putchar(0xA0);
+			//putchar(0xA0);
 
 			//textcolor(1);
 			//gotoxy(2,2);

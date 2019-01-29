@@ -17,17 +17,22 @@
 #define CHAR_RAM 0x0400
 #define COLOUR_RAM 0xD800
 
-#define step_size 3
 
-#define baseline 12
-#define tail_length 10
-#define delta_x 30
-#define delta_y 30
 
 #define SPRITE0_DATA    0x0340
 #define SPRITE0_PTR     0x07F8
 //#define DRIVER          "c64-pot.mou"
 #define DRIVER          "c64-1351.mou"
+
+#define tail_length 8
+
+
+unsigned short hits=0;
+unsigned short step_size=2;
+unsigned char baseline=12;
+unsigned char delta_x=30;
+unsigned char delta_y=30;
+
 
 struct mouse_info mouse;
 
@@ -45,7 +50,7 @@ static const unsigned char CursorSprite[64] = {
 
 
 unsigned char level = 1;
-
+/*
 short wave(unsigned char x){
 
 	unsigned char y;
@@ -68,7 +73,7 @@ short wave(unsigned char x){
 	return y;
 
 }
-
+*/
 
 int main(void) { 
 
@@ -83,8 +88,10 @@ int main(void) {
 	unsigned char tail_ptr, tail_ptr2;
 
 	unsigned short deg,deg2,mod,mod1,mod2;
-	unsigned short hits=0;
-	
+
+
+
+
 
 	memcpy ((void*) SPRITE0_DATA, CursorSprite, sizeof (CursorSprite));
 
@@ -159,19 +166,24 @@ int main(void) {
 		if(deg>360){
 
 		}
-		y = cc65_sin(deg)/36 + baseline;
+		y = (int)cc65_sin(deg)/36 + baseline;
 		
 		deg2= (deg + (xp1+1)*9)/2;
 
 		//y1 = cc65_sin(deg1)/36 + baseline;
-		y2 = cc65_sin(deg2)/36 + baseline;
+		y2 = (int)cc65_sin(deg2)/36 + baseline;
 
 		mod1 = y % 2;
 		mod2 = y2 % 2;
-        gotoxy (0, 2);
-        textcolor(3);
-        cprintf ("mod1: %d mod2: %d\r\n", mod1,mod2);
 
+		textcolor(3);
+
+        /*gotoxy (0, 2);
+        cprintf ("                          ");
+        gotoxy (0, 2);
+        cprintf ("y: %d y2: %d yp1: %d", y,y2,yp1);
+			
+		*/
 		if(mod1==2){bgcolor(1);}
 
 			
@@ -197,28 +209,20 @@ int main(void) {
 
 
 
-		if(y>y2){
+		if(y>y2 || yp1>y){
 			POKE(0xC7 , 0x12);//Reverse on
 			putchar(0xBF);
 			POKE(0xC7 , 0);//Reverse off
 		}
-		else if(y<y2){
+		else if(y<y2 || yp1<y){
 			putchar(0xBF);
 		}
-		else{
-			if(yp1>y){
-				//putchar(0xE2);
-				POKE(0xC7 , 0x12);//Reverse on
-				putchar(0xBF);
-				POKE(0xC7 , 0);//Reverse off
-
-			}
-			else{
-				putchar(0xBF);
+		else {
+				putchar(0xE2);
 				//POKE(0xC7 , 0x12);//Reverse on
 				//putchar(0xE2);
 				//POKE(0xC7 , 0);//Reverse off
-			}
+	
 		}
 
 
@@ -253,10 +257,13 @@ int main(void) {
 
 		//for(n=0;n<tail_length;n++){
 			textcolor(0);
-			tail_ptr2 = tail_length - tail_ptr;
+			tail_ptr2 = tail_ptr+1;
+			if(tail_ptr2>tail_length){
+				tail_ptr2 = 0;
+			}
 
 			gotoxy(tail[tail_ptr2][0], tail[tail_ptr2][1]);
-			//putchar(0xA0);
+			putchar(0xA0);//write over the char
 
 			//textcolor(1);
 			//gotoxy(2,2);
@@ -288,7 +295,7 @@ int main(void) {
 		if((mouse.pos.x < x2+delta_x && mouse.pos.x > x2-delta_x)){
 			if((mouse.pos.y < y2+delta_y && mouse.pos.y > y2-delta_y)){
 				++hits;
-		        gotoxy (0, 23);
+		        gotoxy (1, 23);
 		        textcolor(1);
 		        cprintf ("hits = %d\r\n", hits);
 

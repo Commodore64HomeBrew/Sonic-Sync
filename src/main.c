@@ -30,7 +30,7 @@
 
 unsigned short hits=0;
 unsigned short misses=0;
-unsigned short misses_max=5;
+unsigned short misses_max=4;
 unsigned short level=1;
 unsigned short level_max=15;
 unsigned short step_size=10;
@@ -235,6 +235,7 @@ int main(void) {
 	*/
 	print_level();
 	print_hits();
+	print_misses();
 
 	while(1){
 		time_step=(PEEK(160)*65536)+(PEEK(161)*256+PEEK(162))+step_size;
@@ -573,12 +574,12 @@ int main(void) {
 			deg_offset=deg_offset+deg_step;
 			if(deg_offset>360){deg_offset=0;}
 
-			if(hits>1){
-				hits--;
+			//if(hits>1){
+				//hits--;
 				misses++;
 				print_misses();
 				if(misses==misses_max){level_one();}
-			}
+			//}
 
 		}
 

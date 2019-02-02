@@ -21,15 +21,17 @@
 
 #define SPRITE0_DATA    0x0340
 #define SPRITE0_PTR     0x07F8
-//#define DRIVER          "c64-pot.mou"
-#define DRIVER          "c64-1351.mou"
+#define DRIVER          "c64-pot.mou"
+//define DRIVER          "c64-1351.mou"
+//#define DRIVER          "c64-joy.mou"
 
-#define tail_length 8
+
 
 
 unsigned short hits=0;
-unsigned short step_size=2;
+unsigned short step_size=3;
 unsigned char baseline=12;
+unsigned char tail_length=5;
 unsigned char delta_x=30;
 unsigned char delta_y=30;
 
@@ -79,18 +81,22 @@ int main(void) {
 
 	//unsigned char block[8] = {0xA0, 0xBB, 0xAC	}
 	unsigned long time_step, time_now;
-	unsigned char x,xp1,xt,x2;
-	unsigned char y, yp1,y2;
-	unsigned char wx,wxp1;
+	unsigned char x,xp1,x2;
+	unsigned char y,y1,y2,y3;
 	unsigned char colour;
 	unsigned short offset;
-	unsigned char tail[tail_length][2];
+	unsigned char tail[40][3];
 	unsigned char tail_ptr, tail_ptr2;
 
-	unsigned short deg,deg2,mod,mod1,mod2;
+	unsigned short deg,deg2;
 
+	POKE( 53272,21);//UPPER CASE/PETSCII MODE
+	clrscr();
+	bgcolor(0);
+  	bordercolor(0);
 
-
+	//Blank the screen to speed things up
+  	POKE(0xd011, PEEK(0xd011) & 0xef);
 
 
 	memcpy ((void*) SPRITE0_DATA, CursorSprite, sizeof (CursorSprite));
@@ -101,7 +107,7 @@ int main(void) {
 	/* Set the VIC sprite pointer */
     *(unsigned char*)SPRITE0_PTR = SPRITE0_DATA / 64;
 
-  	VIC.bgcolor[0] = 1;
+  	//VIC.bgcolor[0] = 0;
 
 
     VIC.spr0_color = COLOR_WHITE;
@@ -141,13 +147,18 @@ int main(void) {
 	x=0;
 	xp1=0;
 
-	//POKE(0xC7 , 0x12);//Reverse on
-	//POKE(0xC7 , 0x12);//Graphics mode
-	POKE( 53272,21);//UPPER CASE/PETSCII MODE
-	clrscr();
-	bgcolor(0);
-  	bordercolor(0);
-  	textcolor(0);
+
+
+
+	//baseline x axis
+	textcolor(1);
+	for(x=0;x<39;x++){
+		gotoxy(x,baseline);
+		putchar(0xC0);
+	}
+
+	//Turn on the screen again
+	POKE(0xd011, PEEK(0xd011) | 0x10);
 
 	while(1){
 		time_step=(PEEK(160)*65536)+(PEEK(161)*256+PEEK(162))+step_size;
@@ -163,95 +174,96 @@ int main(void) {
 		//deg=(xp1/40)*360;
 
 		deg=xp1*9;
-		if(deg>360){
-
-		}
 		y = (int)cc65_sin(deg)/36 + baseline;
 		
+		deg=(xp1-1)*9;
+		y1 = (int)cc65_sin(deg)/36 + baseline;
+		deg=xp1*9;
+		y2 = (int)cc65_sin(deg)/36 + baseline;
+		deg=(xp1+1)*9;
+		y3 = (int)cc65_sin(deg)/36 + baseline;
+
 		deg2= (deg + (xp1+1)*9)/2;
 
 		//y1 = cc65_sin(deg1)/36 + baseline;
-		y2 = (int)cc65_sin(deg2)/36 + baseline;
+		//y2 = (int)cc65_sin(deg2)/36 + baseline;
 
-		mod1 = y % 2;
-		mod2 = y2 % 2;
 
-		textcolor(3);
-
-        /*gotoxy (0, 2);
-        cprintf ("                          ");
-        gotoxy (0, 2);
-        cprintf ("y: %d y2: %d yp1: %d", y,y2,yp1);
-			
-		*/
-		if(mod1==2){bgcolor(1);}
-
-			
-
-		mod=mod1+mod2;
 
 
 		tail[tail_ptr][0] = x;
 		tail[tail_ptr][1] = y;
+		//tail[tail_ptr][2] = c;
 
   		//VIC.spr0_x = x;
   		//VIC.spr0_y = y;
 
-		//gotoxy(20,20);
-		//printf("         ");
-		//printf("y:%d",y);
+
 		
 		textcolor(colour);
 		
 
 		gotoxy(x,y);
-		//putchar(0xD1);
 
 
+		if(y1>y2){
+			if(y2>y3){
+				POKE(0xC7 , 0x12);//Reverse on
+				putchar(0xBF);//right diag
+				POKE(0xC7 , 0);//Reverse off
 
-		if(y>y2 || yp1>y){
-			POKE(0xC7 , 0x12);//Reverse on
-			putchar(0xBF);
-			POKE(0xC7 , 0);//Reverse off
+			}
+			else{// if(y2<y3){
+				putchar(0xE2);//bottom flat
+			}
+			/*else{//y2==y3
+				POKE(0xC7 , 0x12);//Reverse on
+				putchar(0xE2);//top flat
+				POKE(0xC7 , 0);//Reverse off
+			}*/
 		}
-		else if(y<y2 || yp1<y){
-			putchar(0xBF);
+		else if(y1<y2){
+			if(y2<y3){
+				putchar(0xBF);//left diag
+			}
+			else{//if(y2>y3){
+
+				POKE(0xC7 , 0x12);//Reverse on
+				putchar(0xE2);//top flat
+				POKE(0xC7 , 0);//Reverse off
+
+
+			}
+			/*
+			else{//y2=y3
+				putchar(0xE2);				
+			}*/
 		}
-		else {
-				putchar(0xE2);
-				//POKE(0xC7 , 0x12);//Reverse on
-				//putchar(0xE2);
-				//POKE(0xC7 , 0);//Reverse off
-	
-		}
+		else{//y1==y2
+			if(y2>y3){
+
+				POKE(0xC7 , 0x12);//Reverse on
+				putchar(0xE2);//top flat
+				POKE(0xC7 , 0);//Reverse off
 
 
-		yp1=y;
-
-
-
-
-
-
-
-
-
+			}
+			else if(y2<y3){
+				putchar(0xE2);//bottom flat
+			}
+			else{//y2=y3
+				putchar(0xC0);
+			}
+		}		
 
 
 
 
 
-
-
-
-
-
-
-
-
-
-
-
+		//baseline x axis
+		textcolor(1);
+		gotoxy(x,baseline);
+		putchar(0xC0);
 
 
 
@@ -261,10 +273,11 @@ int main(void) {
 			if(tail_ptr2>tail_length){
 				tail_ptr2 = 0;
 			}
-
-			gotoxy(tail[tail_ptr2][0], tail[tail_ptr2][1]);
-			putchar(0xA0);//write over the char
-
+			//Skip over the baseline
+			if(tail[tail_ptr2][1]!=baseline){
+				gotoxy(tail[tail_ptr2][0], tail[tail_ptr2][1]);
+				putchar(0xA0);//write over the char
+			}
 			//textcolor(1);
 			//gotoxy(2,2);
 			//printf("         ");
@@ -272,18 +285,13 @@ int main(void) {
 		//}
 
 		++tail_ptr;
-		if(tail_ptr>tail_length){
+		if(tail_ptr>(tail_length)){
 			tail_ptr = 0;
 		}
 
-		/*
-		POKE(0xC7 , 0);//Reverse off
 
-		//baseline x axis
-		gotoxy(x,baseline);
-		putchar(0xC0);
-		POKE(0xC7 , 0x12);//Reverse on
-		*/
+
+		
 
         mouse_info (&mouse);
         //gotoxy (0, 2);

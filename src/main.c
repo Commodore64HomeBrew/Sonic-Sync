@@ -29,15 +29,21 @@
 
 
 unsigned short hits=0;
-unsigned short step_size=4;
+unsigned short misses=0;
+unsigned short misses_max=5;
+unsigned short level=1;
+unsigned short level_max=15;
+unsigned short step_size=10;
+unsigned short step_max=10;
 unsigned char baseline=12;
 unsigned char tail_length=10;
-unsigned char delta_x=30;
-unsigned char delta_y=30;
+unsigned char delta_x=25;
+unsigned char delta_y=25;
 unsigned short deg_offset=30;
 unsigned short deg_step=10;
 unsigned char x_step=1;
 unsigned char x_step_max=10;
+short amplitude=36;
 
 
 struct mouse_info mouse;
@@ -54,8 +60,6 @@ static const unsigned char CursorSprite[64] = {
 0x80,0x00,0x96,0x00,0x00,0x28,0x00,0x86
 };
 
-
-unsigned char level = 1;
 /*
 short wave(unsigned char x){
 
@@ -81,16 +85,69 @@ short wave(unsigned char x){
 }
 */
 
+void print_level(){
+	gotoxy (30, 24);
+	textcolor(5);
+	cprintf ("level: %d \r\n", level);
+}
+
+void print_hits(){
+	gotoxy (1, 24);
+	textcolor(7);
+	cprintf ("hits: %d  \r\n", hits);
+}
+
+
+
+void print_misses(){
+	gotoxy (15, 24);
+	textcolor(8);
+	cprintf ("misses: %d \r\n", misses);
+}
+
+/*
+void print_speed(){
+	gotoxy (22, 24);
+	textcolor(8);
+	cprintf ("speed: %d  \r\n", x_step);
+}
+
+void print_deg_steps(){
+	gotoxy (22, 24);
+	textcolor(8);
+	cprintf ("speed: %d  \r\n", step_max-level);
+
+}
+	print_amplitude();
+*/
+
+
+void level_one(){
+	level=1;
+	hits=0;
+	misses=0;
+	step_size=step_max;
+	x_step=1;
+	amplitude=36;
+	print_level();
+	print_hits();
+	print_misses();
+	//print_speed();
+	//print_deg_steps();
+	//print_amplitude();
+}
+
 int main(void) { 
 
 	//unsigned char block[8] = {0xA0, 0xBB, 0xAC	}
 	unsigned long time_step, time_now;
 	unsigned char x,xp1,x2;
 	unsigned char y,y1,y2,y3;
-	unsigned char colour;
+	unsigned char colour,c;
 	unsigned short offset;
 	unsigned char tail[40][3];
 	unsigned char tail_ptr, tail_ptr2;
+	unsigned short i;
 
 	unsigned short deg,x_deg;
 
@@ -150,8 +207,7 @@ int main(void) {
 	colour = 1;
 	x=0;
 	xp1=0;
-
-
+	tail_ptr=0;
 
 
 	//baseline x axis
@@ -163,6 +219,22 @@ int main(void) {
 
 	//Turn on the screen again
 	POKE(0xd011, PEEK(0xd011) | 0x10);
+
+	//Little effect
+	/*
+	while(1){
+		for(c=1;c<15;c++){
+			bordercolor(c);
+
+			VICWaitNotVBlank(); 
+            VICWaitVBlank(); 
+
+		}
+
+	}
+	*/
+	print_level();
+	print_hits();
 
 	while(1){
 		time_step=(PEEK(160)*65536)+(PEEK(161)*256+PEEK(162))+step_size;
@@ -186,15 +258,15 @@ int main(void) {
 */		
 		deg=(xp1-1)*9 + deg_offset;
 		if(deg>360){deg=deg-360;}
-		y1 = (int)cc65_sin(deg)/36 + baseline;
+		y1 = (int)cc65_sin(deg)/amplitude + baseline;
 		
 		deg=xp1*9 + deg_offset;
 		if(deg>360){deg=deg-360;}
-		y2 = (int)cc65_sin(deg)/36 + baseline;
+		y2 = (int)cc65_sin(deg)/amplitude + baseline;
 		
 		deg=(xp1+1)*9 + deg_offset;
 		if(deg>360){deg=deg-360;}
-		y3 = (int)cc65_sin(deg)/36 + baseline;
+		y3 = (int)cc65_sin(deg)/amplitude + baseline;
 
 		//deg2= (deg + (xp1+1)*9)/2;
 
@@ -240,7 +312,10 @@ int main(void) {
 			}*/
 		}
 		else if(y1<y2){
+			//dy1=y2-y1;
+
 			if(y2<y3){
+				//dy3=y3-y2;
 				putchar(0xBF);//left diag
 			}
 			else{//if(y2>y3){
@@ -258,6 +333,7 @@ int main(void) {
 		}
 		else{//y1==y2
 			if(y2>y3){
+				//dy=y2-y3;
 
 				POKE(0xC7 , 0x12);//Reverse on
 				putchar(0xE2);//top flat
@@ -320,11 +396,39 @@ int main(void) {
 		if((mouse.pos.x < x2+delta_x && mouse.pos.x > x2-delta_x)){
 			if((mouse.pos.y < y+delta_y && mouse.pos.y > y-delta_y)){
 				++hits;
-		        gotoxy (1, 23);
-		        textcolor(1);
-		        cprintf ("hits = %d\r\n", hits);
+				print_hits();
 
-				bordercolor(colour);
+				if(misses>=1){
+					misses--;
+					print_misses();
+				}
+				
+				//bordercolor(colour);
+				for(c=1;c<15;c++){bordercolor(c);}
+
+				if(hits>99){
+					for(i=0;i<25;i++){
+						for(c=1;c<15;c++){
+							bordercolor(c);
+							VICWaitNotVBlank(); 
+				            VICWaitVBlank(); 
+						}
+					}
+					hits=0;
+					level++;
+					if(level==level_max){
+						level_one();
+					}
+
+					if(step_size>1){
+						step_size=step_max-level;
+					}
+					//print_speed();
+					print_hits();
+					print_level();
+
+				}
+				bordercolor(0);
 
 			}
 			else{
@@ -444,11 +548,14 @@ int main(void) {
 		xp1=xp1+x_step;
 		x_deg=xp1*9;
 		if((x_deg)>360){
-			x_step++;
-			if(x_step>x_step_max){
-				x_step=1;
-			}
 			xp1=0;
+
+			if(level>3){
+				x_step++;
+				if(x_step>x_step_max || x_step>level){
+					x_step=1;
+				}
+			}
 		}
 
 		x=x+1;
@@ -458,8 +565,20 @@ int main(void) {
 			colour++;
 			if(colour>15){colour=1;}
 
+			if(level>6){
+				amplitude++;
+				if(amplitude>70){amplitude=25;}
+			}
+
 			deg_offset=deg_offset+deg_step;
 			if(deg_offset>360){deg_offset=0;}
+
+			if(hits>1){
+				hits--;
+				misses++;
+				print_misses();
+				if(misses==misses_max){level_one();}
+			}
 
 		}
 

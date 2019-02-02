@@ -21,19 +21,23 @@
 
 #define SPRITE0_DATA    0x0340
 #define SPRITE0_PTR     0x07F8
-#define DRIVER          "c64-pot.mou"
-//define DRIVER          "c64-1351.mou"
+//#define DRIVER          "c64-pot.mou"
+#define DRIVER          "c64-1351.mou"
 //#define DRIVER          "c64-joy.mou"
 
 
 
 
 unsigned short hits=0;
-unsigned short step_size=3;
+unsigned short step_size=4;
 unsigned char baseline=12;
-unsigned char tail_length=5;
+unsigned char tail_length=10;
 unsigned char delta_x=30;
 unsigned char delta_y=30;
+unsigned short deg_offset=30;
+unsigned short deg_step=10;
+unsigned char x_step=1;
+unsigned char x_step_max=10;
 
 
 struct mouse_info mouse;
@@ -88,7 +92,7 @@ int main(void) {
 	unsigned char tail[40][3];
 	unsigned char tail_ptr, tail_ptr2;
 
-	unsigned short deg,deg2;
+	unsigned short deg,x_deg;
 
 	POKE( 53272,21);//UPPER CASE/PETSCII MODE
 	clrscr();
@@ -151,11 +155,11 @@ int main(void) {
 
 
 	//baseline x axis
-	textcolor(1);
+	/*textcolor(1);
 	for(x=0;x<39;x++){
 		gotoxy(x,baseline);
 		putchar(0xC0);
-	}
+	}*/
 
 	//Turn on the screen again
 	POKE(0xd011, PEEK(0xd011) | 0x10);
@@ -172,27 +176,40 @@ int main(void) {
 		//0-360
 
 		//deg=(xp1/40)*360;
+/*
+		deg=xp1*9 + deg_offset;
+		if(deg>360){
+			deg=deg-360;
+		}
 
-		deg=xp1*9;
 		y = (int)cc65_sin(deg)/36 + baseline;
-		
-		deg=(xp1-1)*9;
+*/		
+		deg=(xp1-1)*9 + deg_offset;
+		if(deg>360){deg=deg-360;}
 		y1 = (int)cc65_sin(deg)/36 + baseline;
-		deg=xp1*9;
+		
+		deg=xp1*9 + deg_offset;
+		if(deg>360){deg=deg-360;}
 		y2 = (int)cc65_sin(deg)/36 + baseline;
-		deg=(xp1+1)*9;
+		
+		deg=(xp1+1)*9 + deg_offset;
+		if(deg>360){deg=deg-360;}
 		y3 = (int)cc65_sin(deg)/36 + baseline;
 
-		deg2= (deg + (xp1+1)*9)/2;
+		//deg2= (deg + (xp1+1)*9)/2;
 
 		//y1 = cc65_sin(deg1)/36 + baseline;
 		//y2 = (int)cc65_sin(deg2)/36 + baseline;
 
-
-
-
+		/*
+		textcolor(1);
+		gotoxy(2,2);
+		printf("                                   ");
+		gotoxy(2,2);
+		printf("y:%d", deg);
+		*/
 		tail[tail_ptr][0] = x;
-		tail[tail_ptr][1] = y;
+		tail[tail_ptr][1] = y2;
 		//tail[tail_ptr][2] = c;
 
   		//VIC.spr0_x = x;
@@ -203,7 +220,7 @@ int main(void) {
 		textcolor(colour);
 		
 
-		gotoxy(x,y);
+		gotoxy(x,y2);
 
 
 		if(y1>y2){
@@ -259,12 +276,12 @@ int main(void) {
 
 
 
-
+/*
 		//baseline x axis
 		textcolor(1);
 		gotoxy(x,baseline);
 		putchar(0xC0);
-
+*/
 
 
 		//for(n=0;n<tail_length;n++){
@@ -274,10 +291,10 @@ int main(void) {
 				tail_ptr2 = 0;
 			}
 			//Skip over the baseline
-			if(tail[tail_ptr2][1]!=baseline){
+			//if(tail[tail_ptr2][1]!=baseline){
 				gotoxy(tail[tail_ptr2][0], tail[tail_ptr2][1]);
 				putchar(0xA0);//write over the char
-			}
+			//}
 			//textcolor(1);
 			//gotoxy(2,2);
 			//printf("         ");
@@ -299,9 +316,9 @@ int main(void) {
         //cprintf (" Y  = %3d\r\n", mouse.pos.y);
 
         x2=x*8;
-        y2=y*8;
+        y=y2*8;
 		if((mouse.pos.x < x2+delta_x && mouse.pos.x > x2-delta_x)){
-			if((mouse.pos.y < y2+delta_y && mouse.pos.y > y2-delta_y)){
+			if((mouse.pos.y < y+delta_y && mouse.pos.y > y-delta_y)){
 				++hits;
 		        gotoxy (1, 23);
 		        textcolor(1);
@@ -424,8 +441,15 @@ int main(void) {
 			time_now = (PEEK(160)*65536)+(PEEK(161)*256+PEEK(162));
 		}
 
-		xp1=xp1+1;
-		if(xp1>39){xp1=0;}
+		xp1=xp1+x_step;
+		x_deg=xp1*9;
+		if((x_deg)>360){
+			x_step++;
+			if(x_step>x_step_max){
+				x_step=1;
+			}
+			xp1=0;
+		}
 
 		x=x+1;
 		//xp1=x+1;
@@ -433,7 +457,12 @@ int main(void) {
 			x=0;
 			colour++;
 			if(colour>15){colour=1;}
+
+			deg_offset=deg_offset+deg_step;
+			if(deg_offset>360){deg_offset=0;}
+
 		}
+
 	}
 
     return 0; 

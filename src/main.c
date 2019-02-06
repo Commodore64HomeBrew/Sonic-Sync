@@ -21,9 +21,10 @@
 
 #define SPRITE0_DATA    0x0340
 #define SPRITE0_PTR     0x07F8
-//#define DRIVER          "c64-pot.mou"
-#define DRIVER          "c64-1351.mou"
-//#define DRIVER          "c64-joy.mou"
+
+#define KOALA_DRIVER          "c64-pot.mou"
+#define MOUSE_DRIVER          "c64-1351.mou"
+#define JOY_DRIVER          "c64-joy.mou"
 
 
 
@@ -33,8 +34,8 @@ unsigned short misses=0;
 unsigned short misses_max=4;
 unsigned short level=1;
 unsigned short level_max=15;
-unsigned short step_size=10;
-unsigned short step_max=10;
+unsigned short step_size=4;
+unsigned short step_max=4;
 unsigned char baseline=12;
 unsigned char tail_length=10;
 unsigned char delta_x=25;
@@ -45,6 +46,8 @@ unsigned char x_step=1;
 unsigned char x_step_max=10;
 short amplitude=36;
 
+unsigned char tail[40][3];
+unsigned char tail2[40][3];
 
 struct mouse_info mouse;
 
@@ -145,26 +148,85 @@ int main(void) {
 	unsigned char y,y1,y2,y3;
 	unsigned char colour,c;
 	unsigned short offset;
-	unsigned char tail[40][3];
 	unsigned char tail_ptr, tail_ptr2;
-	unsigned short i;
-
+	unsigned short n;
 	unsigned short deg,x_deg;
 
-	POKE( 53272,21);//UPPER CASE/PETSCII MODE
+	unsigned char loop;
+
+	POKE( 53272,23);//UPPER CASE/PETSCII MODE
 	clrscr();
+	bgcolor(1);
+  	bordercolor(1);
+
+  	textcolor(0);
+	gotoxy (8, 10);
+	cprintf ("Select your input device:",);
+	
+	gotoxy (13, 12);
+	textcolor(2);
+	cprintf ("1 -> Koala Pad");
+	gotoxy (13, 13);
+	textcolor(4);
+	cprintf ("2 -> 1351 Mouse");
+	gotoxy (13, 14);
+	textcolor(6);
+	cprintf ("3 -> Joystick");
+
+	colour=2;
+	loop=1;
+	while( loop==1 )
+	{
+
+	  	textcolor(colour);
+		gotoxy (15, 3);
+		cprintf ("SONIC SYNC",);
+
+		if( kbhit() )
+		{
+			c = cgetc();
+
+			switch( c )
+			{
+				case 0x31:
+					/* Load and install the koala pad driver */
+					mouse_load_driver (&mouse_def_callbacks, KOALA_DRIVER);
+					loop=0;
+					break;
+
+				case 0x32:
+					/* Load and install the mouse driver */
+					mouse_load_driver (&mouse_def_callbacks, MOUSE_DRIVER);
+					loop=0;
+					break;
+
+				case 0x33:
+					/* Load and install the joystick driver */
+					mouse_load_driver (&mouse_def_callbacks, JOY_DRIVER);
+					loop=0;
+					break;
+			}
+
+		}
+		colour++;
+		if(colour>15){colour=2;}
+	}
+
 	bgcolor(0);
   	bordercolor(0);
 
+
 	//Blank the screen to speed things up
   	POKE(0xd011, PEEK(0xd011) & 0xef);
+
+  	clrscr();
+	POKE( 53272,21);//UPPER CASE/PETSCII MODE
 
 
 	memcpy ((void*) SPRITE0_DATA, CursorSprite, sizeof (CursorSprite));
 
 
-	/* Load and install the mouse driver */
-	mouse_load_driver (&mouse_def_callbacks, DRIVER);
+
 	/* Set the VIC sprite pointer */
     *(unsigned char*)SPRITE0_PTR = SPRITE0_DATA / 64;
 
@@ -236,9 +298,10 @@ int main(void) {
 	print_level();
 	print_hits();
 	print_misses();
+	
+	time_step=(PEEK(160)*65536)+(PEEK(161)*256+PEEK(162))+step_size;
 
 	while(1){
-		time_step=(PEEK(160)*65536)+(PEEK(161)*256+PEEK(162))+step_size;
 
 		//y=wave(x);
 		//yp1=wave(xp1);
@@ -257,140 +320,152 @@ int main(void) {
 
 		y = (int)cc65_sin(deg)/36 + baseline;
 */		
-		deg=(xp1-1)*9 + deg_offset;
-		if(deg>360){deg=deg-360;}
-		y1 = (int)cc65_sin(deg)/amplitude + baseline;
-		
-		deg=xp1*9 + deg_offset;
-		if(deg>360){deg=deg-360;}
-		y2 = (int)cc65_sin(deg)/amplitude + baseline;
-		
-		deg=(xp1+1)*9 + deg_offset;
-		if(deg>360){deg=deg-360;}
-		y3 = (int)cc65_sin(deg)/amplitude + baseline;
-
-		//deg2= (deg + (xp1+1)*9)/2;
-
-		//y1 = cc65_sin(deg1)/36 + baseline;
-		//y2 = (int)cc65_sin(deg2)/36 + baseline;
-
-		/*
-		textcolor(1);
-		gotoxy(2,2);
-		printf("                                   ");
-		gotoxy(2,2);
-		printf("y:%d", deg);
-		*/
-		tail[tail_ptr][0] = x;
-		tail[tail_ptr][1] = y2;
-		//tail[tail_ptr][2] = c;
-
-  		//VIC.spr0_x = x;
-  		//VIC.spr0_y = y;
 
 
-		
-		textcolor(colour);
-		
-
-		gotoxy(x,y2);
 
 
-		if(y1>y2){
-			if(y2>y3){
-				POKE(0xC7 , 0x12);//Reverse on
-				putchar(0xBF);//right diag
-				POKE(0xC7 , 0);//Reverse off
 
+
+		x2=xp1;
+
+		for(n=0;n<tail_length;n++){
+
+			deg=x2*9 + deg_offset;
+			if(deg>360){deg=deg-360;}
+
+			tail[n][0] = x2;
+			tail[n][1] = (int)cc65_sin(deg)/amplitude + baseline;
+
+			if(x2==0){
+				x2=40;
 			}
-			else{// if(y2<y3){
-				putchar(0xE2);//bottom flat
-			}
-			/*else{//y2==y3
-				POKE(0xC7 , 0x12);//Reverse on
-				putchar(0xE2);//top flat
-				POKE(0xC7 , 0);//Reverse off
-			}*/
+
+			x2--;
+
+
+
 		}
-		else if(y1<y2){
-			//dy1=y2-y1;
 
-			if(y2<y3){
-				//dy3=y3-y2;
-				putchar(0xBF);//left diag
-			}
-			else{//if(y2>y3){
-
-				POKE(0xC7 , 0x12);//Reverse on
-				putchar(0xE2);//top flat
-				POKE(0xC7 , 0);//Reverse off
+		for(n=1;n<tail_length;n++){
 
 
-			}
+			y1 = tail[n+1][1];
+			y2 = tail[n][1];
+			y3 = tail[n-1][1];
+
+
+			//deg2= (deg + (xp1+1)*9)/2;
+
+			//y1 = cc65_sin(deg1)/36 + baseline;
+			//y2 = (int)cc65_sin(deg2)/36 + baseline;
+
 			/*
-			else{//y2=y3
-				putchar(0xE2);				
-			}*/
-		}
-		else{//y1==y2
-			if(y2>y3){
-				//dy=y2-y3;
+			textcolor(1);
+			gotoxy(2,2);
+			printf("                                   ");
+			gotoxy(2,2);
+			printf("y:%d", deg);
+			*/
+			//tail[tail_ptr][0] = x;
+			//tail[tail_ptr][1] = y2;
+			//tail[tail_ptr][2] = c;
 
-				POKE(0xC7 , 0x12);//Reverse on
-				putchar(0xE2);//top flat
-				POKE(0xC7 , 0);//Reverse off
+	  		//VIC.spr0_x = x;
+	  		//VIC.spr0_y = y;
 
-
-			}
-			else if(y2<y3){
-				putchar(0xE2);//bottom flat
-			}
-			else{//y2=y3
-				putchar(0xC0);
-			}
-		}		
-
-
-
-
-/*
-		//baseline x axis
-		textcolor(1);
-		gotoxy(x,baseline);
-		putchar(0xC0);
-*/
-
-
-		//for(n=0;n<tail_length;n++){
 			textcolor(0);
-			tail_ptr2 = tail_ptr+1;
-			if(tail_ptr2>tail_length){
-				tail_ptr2 = 0;
-			}
-			//Skip over the baseline
-			//if(tail[tail_ptr2][1]!=baseline){
-				gotoxy(tail[tail_ptr2][0], tail[tail_ptr2][1]);
-				putchar(0xA0);//write over the char
-			//}
-			//textcolor(1);
-			//gotoxy(2,2);
-			//printf("         ");
-			//printf("x:%d y:%d",tail[tail_ptr2][0],tail[tail_ptr2][1]);
-		//}
+			gotoxy(tail2[n][0], tail2[n][1]);
+			putchar(0xA0);//write over the char
+			
+			//textcolor(colour);
+			textcolor(n);
 
-		++tail_ptr;
-		if(tail_ptr>(tail_length)){
-			tail_ptr = 0;
+			gotoxy(tail[n][0],y2);
+
+			if(y1>y2){
+				if(y2>y3){
+
+					POKE(0xC7 , 0x12);//Reverse on
+					putchar(0xBF);//right diag
+					POKE(0xC7 , 0);//Reverse off
+
+				}
+				else{// if(y2<y3){
+					putchar(0xE2);//bottom flat
+				}
+				/*else{//y2==y3
+					POKE(0xC7 , 0x12);//Reverse on
+					putchar(0xE2);//top flat
+					POKE(0xC7 , 0);//Reverse off
+				}*/
+			}
+			else if(y1<y2){
+				//dy1=y2-y1;
+
+				if(y2<y3){
+					//dy3=y3-y2;
+					putchar(0xBF);//left diag
+				}
+				else{//if(y2>y3){
+
+					POKE(0xC7 , 0x12);//Reverse on
+					putchar(0xE2);//top flat
+					POKE(0xC7 , 0);//Reverse off
+
+
+				}
+				/*
+				else{//y2=y3
+					putchar(0xE2);				
+				}*/
+			}
+			else{//y1==y2
+				if(y2>y3){
+					//dy=y2-y3;
+
+					POKE(0xC7 , 0x12);//Reverse on
+					putchar(0xE2);//top flat
+					POKE(0xC7 , 0);//Reverse off
+
+
+				}
+				else if(y2<y3){
+					putchar(0xE2);//bottom flat
+				}
+				else{//y2=y3
+					putchar(0xC0);
+				}
+			}		
+
+
+
+
+	/*
+			//baseline x axis
+			textcolor(1);
+			gotoxy(x,baseline);
+			putchar(0xC0);
+	*/
+
+
+
+
+
+
 		}
 
+		for(n=0;n<tail_length;n++){
+			tail2[n][0]=tail[n][0];
+			tail2[n][1]=tail[n][1];
 
-
-		
+		}
 
         mouse_info (&mouse);
         //gotoxy (0, 2);
         //cprintf (" X  = %3d\r\n", mouse.pos.x);
         //cprintf (" Y  = %3d\r\n", mouse.pos.y);
+
+		x = tail[0][0];
 
         x2=x*8;
         y=y2*8;
@@ -408,7 +483,7 @@ int main(void) {
 				for(c=1;c<15;c++){bordercolor(c);}
 
 				if(hits>99){
-					for(i=0;i<25;i++){
+					for(n=0;n<25;n++){
 						for(c=1;c<15;c++){
 							bordercolor(c);
 							VICWaitNotVBlank(); 
@@ -539,12 +614,8 @@ int main(void) {
 
 
 		//putc(block[i]);
+	
 
-		time_now = (PEEK(160)*65536)+(PEEK(161)*256+PEEK(162));
-
-		while(time_now<time_step){
-			time_now = (PEEK(160)*65536)+(PEEK(161)*256+PEEK(162));
-		}
 
 		xp1=xp1+x_step;
 		x_deg=xp1*9;
@@ -582,6 +653,15 @@ int main(void) {
 			//}
 
 		}
+
+
+		time_now = (PEEK(160)*65536)+(PEEK(161)*256+PEEK(162));
+
+		while(time_now<time_step){
+			time_now = (PEEK(160)*65536)+(PEEK(161)*256+PEEK(162));
+		}
+		time_step=(PEEK(160)*65536)+(PEEK(161)*256+PEEK(162))+step_size;
+
 
 	}
 

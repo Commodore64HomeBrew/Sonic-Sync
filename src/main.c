@@ -17,7 +17,8 @@
 #define CHAR_RAM 0x0400
 #define COLOUR_RAM 0xD800
 
-
+#define SCREEN_W 39
+#define SCREEN_H 24
 
 #define SPRITE0_DATA    0x0340
 #define SPRITE0_PTR     0x07F8
@@ -34,8 +35,8 @@ unsigned short misses=0;
 unsigned short misses_max=4;
 unsigned short level=1;
 unsigned short level_max=15;
-unsigned short step_size=4;
-unsigned short step_max=4;
+unsigned short step_size=10;
+unsigned short step_max=10;
 unsigned char baseline=12;
 unsigned char tail_length=10;
 unsigned char delta_x=25;
@@ -147,7 +148,7 @@ int main(void) {
 	unsigned char x,xp1,x2;
 	unsigned char y,y1,y2,y3;
 	unsigned char colour,c;
-	unsigned short offset;
+	unsigned short offset,offset2;
 	unsigned char tail_ptr, tail_ptr2;
 	unsigned short n;
 	unsigned short deg,x_deg;
@@ -274,7 +275,7 @@ int main(void) {
 
 	//baseline x axis
 	/*textcolor(1);
-	for(x=0;x<39;x++){
+	for(x=0;x<SCREEN_W;x++){
 		gotoxy(x,baseline);
 		putchar(0xC0);
 	}*/
@@ -300,7 +301,7 @@ int main(void) {
 	print_misses();
 	
 	time_step=(PEEK(160)*65536)+(PEEK(161)*256+PEEK(162))+step_size;
-
+	x2=tail_length;
 	while(1){
 
 		//y=wave(x);
@@ -327,10 +328,14 @@ int main(void) {
 
 
 		x2=xp1;
+		deg=xp1*9 + deg_offset;
+		//x2=25;
+		//for(n=0;n<tail_length;n++){
+		n=0;
+		do{
 
-		for(n=0;n<tail_length;n++){
-
-			deg=x2*9 + deg_offset;
+			//deg=x2*9 + deg_offset;
+			deg=deg+10;
 			if(deg>360){deg=deg-360;}
 
 			tail[n][0] = x2;
@@ -341,13 +346,12 @@ int main(void) {
 			}
 
 			x2--;
+			n++;
+		}while(n<tail_length);
 
-
-
-		}
-
-		for(n=1;n<tail_length;n++){
-
+		//for(n=1;n<tail_length;n++){
+		n=1;
+		do{
 
 			y1 = tail[n+1][1];
 			y2 = tail[n][1];
@@ -373,25 +377,40 @@ int main(void) {
 	  		//VIC.spr0_x = x;
 	  		//VIC.spr0_y = y;
 
-			textcolor(0);
-			gotoxy(tail2[n][0], tail2[n][1]);
-			putchar(0xA0);//write over the char
+
+
+			//write over the char
+
+			//POKE(CHAR_RAM + offset , 0x20);
+			//POKE(COLOUR_RAM + offset , 0);
+
+			//textcolor(0);
+			//gotoxy(tail2[n][0], tail2[n][1]);
+			//putchar(0xA0);//write over the char
 			
+
+			offset2 = (tail2[n][1])*40 + tail2[n][0];
+			offset = y2*40 + tail[n][0];
+
 			//textcolor(colour);
-			textcolor(n);
+			//textcolor(n);
 
-			gotoxy(tail[n][0],y2);
-
+			//gotoxy(tail[n][0],y2);
+			colour=n;
 			if(y1>y2){
 				if(y2>y3){
+					POKE(CHAR_RAM + offset2 , 0x20);
+					//right diag
+					POKE(CHAR_RAM + offset , 0xFF);
+					POKE(COLOUR_RAM + offset , colour);
 
-					POKE(0xC7 , 0x12);//Reverse on
-					putchar(0xBF);//right diag
-					POKE(0xC7 , 0);//Reverse off
 
 				}
 				else{// if(y2<y3){
-					putchar(0xE2);//bottom flat
+					POKE(CHAR_RAM + offset2 , 0x20);
+					//bottom flat
+					POKE(CHAR_RAM + offset , 0x62);
+					POKE(COLOUR_RAM + offset , colour);
 				}
 				/*else{//y2==y3
 					POKE(0xC7 , 0x12);//Reverse on
@@ -404,15 +423,16 @@ int main(void) {
 
 				if(y2<y3){
 					//dy3=y3-y2;
-					putchar(0xBF);//left diag
+					POKE(CHAR_RAM + offset2 , 0x20);
+					//left diag
+					POKE(CHAR_RAM + offset , 0x7F);
+					POKE(COLOUR_RAM + offset , colour);
 				}
 				else{//if(y2>y3){
-
-					POKE(0xC7 , 0x12);//Reverse on
-					putchar(0xE2);//top flat
-					POKE(0xC7 , 0);//Reverse off
-
-
+					POKE(CHAR_RAM + offset2 , 0x20);
+					//top flat
+					POKE(CHAR_RAM + offset , 0xE2);
+					POKE(COLOUR_RAM + offset , colour);
 				}
 				/*
 				else{//y2=y3
@@ -422,18 +442,23 @@ int main(void) {
 			else{//y1==y2
 				if(y2>y3){
 					//dy=y2-y3;
-
-					POKE(0xC7 , 0x12);//Reverse on
-					putchar(0xE2);//top flat
-					POKE(0xC7 , 0);//Reverse off
-
+					POKE(CHAR_RAM + offset2 , 0x20);
+					//top flat
+					POKE(CHAR_RAM + offset , 0xE2);
+					POKE(COLOUR_RAM + offset , colour);
 
 				}
 				else if(y2<y3){
-					putchar(0xE2);//bottom flat
+					POKE(CHAR_RAM + offset2 , 0x20);
+					//bottom flat
+					POKE(CHAR_RAM + offset , 0x62);
+					POKE(COLOUR_RAM + offset , colour);
 				}
 				else{//y2=y3
-					putchar(0xC0);
+					POKE(CHAR_RAM + offset2 , 0x20);
+					//middle flat
+					POKE(CHAR_RAM + offset , 0x40);
+					POKE(COLOUR_RAM + offset , colour);
 				}
 			}		
 
@@ -451,24 +476,24 @@ int main(void) {
 
 
 
+			n++;
+		}while(n<tail_length);
 
-		}
-
-		for(n=0;n<tail_length;n++){
+		//for(n=0;n<tail_length;n++){
+		n=0;		
+		do{			
 			tail2[n][0]=tail[n][0];
 			tail2[n][1]=tail[n][1];
-
-		}
+			n++;
+		}while(n<tail_length);
 
         mouse_info (&mouse);
         //gotoxy (0, 2);
         //cprintf (" X  = %3d\r\n", mouse.pos.x);
         //cprintf (" Y  = %3d\r\n", mouse.pos.y);
 
-		x = tail[0][0];
-
-        x2=x*8;
-        y=y2*8;
+        x2=tail[0][0]*8;
+        y=tail[0][1]*8;
 		if((mouse.pos.x < x2+delta_x && mouse.pos.x > x2-delta_x)){
 			if((mouse.pos.y < y+delta_y && mouse.pos.y > y-delta_y)){
 				++hits;
@@ -654,14 +679,14 @@ int main(void) {
 
 		}
 
-
+		
 		time_now = (PEEK(160)*65536)+(PEEK(161)*256+PEEK(162));
 
 		while(time_now<time_step){
 			time_now = (PEEK(160)*65536)+(PEEK(161)*256+PEEK(162));
 		}
 		time_step=(PEEK(160)*65536)+(PEEK(161)*256+PEEK(162))+step_size;
-
+		
 
 	}
 

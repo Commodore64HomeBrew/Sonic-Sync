@@ -38,7 +38,7 @@ unsigned short level_max=15;
 unsigned short step_size=10;
 unsigned short step_max=10;
 unsigned char baseline=12;
-unsigned char tail_length=10;
+unsigned char tail_length=8;
 unsigned char delta_x=25;
 unsigned char delta_y=25;
 unsigned short deg_offset=30;
@@ -63,6 +63,7 @@ static const unsigned char CursorSprite[64] = {
 0x26,0xeb,0x98,0x09,0xbe,0x60,0x02,0x69,
 0x80,0x00,0x96,0x00,0x00,0x28,0x00,0x86
 };
+
 
 /*
 short wave(unsigned char x){
@@ -149,11 +150,13 @@ int main(void) {
 	unsigned char y,y1,y2,y3;
 	unsigned char colour,c;
 	unsigned short offset,offset2;
-	unsigned char tail_ptr, tail_ptr2;
-	unsigned short n;
+	unsigned short n,t;
 	unsigned short deg,x_deg;
 
 	unsigned char loop;
+
+	//unsigned char tail_colour[8] = { 0x9a, 0x9F, 0x05, 0x9e, 0x81, 0x1C, 0x95, 0x97 };
+	unsigned char tail_colour[8] = { 14, 3, 1, 7, 8, 2, 9, 11 };
 
 	POKE( 53272,23);//UPPER CASE/PETSCII MODE
 	clrscr();
@@ -270,7 +273,7 @@ int main(void) {
 	colour = 1;
 	x=0;
 	xp1=0;
-	tail_ptr=0;
+
 
 
 	//baseline x axis
@@ -296,6 +299,7 @@ int main(void) {
 
 	}
 	*/
+	level_one();
 	print_level();
 	print_hits();
 	print_misses();
@@ -330,6 +334,7 @@ int main(void) {
 		x2=xp1;
 		deg=xp1*9 + deg_offset;
 		//x2=25;
+		t=tail_length+1;
 		//for(n=0;n<tail_length;n++){
 		n=0;
 		do{
@@ -347,7 +352,7 @@ int main(void) {
 
 			x2--;
 			n++;
-		}while(n<tail_length);
+		}while(n<t);
 
 		//for(n=1;n<tail_length;n++){
 		n=1;
@@ -370,9 +375,7 @@ int main(void) {
 			gotoxy(2,2);
 			printf("y:%d", deg);
 			*/
-			//tail[tail_ptr][0] = x;
-			//tail[tail_ptr][1] = y2;
-			//tail[tail_ptr][2] = c;
+
 
 	  		//VIC.spr0_x = x;
 	  		//VIC.spr0_y = y;
@@ -396,7 +399,7 @@ int main(void) {
 			//textcolor(n);
 
 			//gotoxy(tail[n][0],y2);
-			colour=n;
+			colour=tail_colour[n-1];
 			if(y1>y2){
 				if(y2>y3){
 					POKE(CHAR_RAM + offset2 , 0x20);
@@ -492,8 +495,8 @@ int main(void) {
         //cprintf (" X  = %3d\r\n", mouse.pos.x);
         //cprintf (" Y  = %3d\r\n", mouse.pos.y);
 
-        x2=tail[0][0]*8;
-        y=tail[0][1]*8;
+        x2=tail[1][0]*8;
+        y=tail[1][1]*8;
 		if((mouse.pos.x < x2+delta_x && mouse.pos.x > x2-delta_x)){
 			if((mouse.pos.y < y+delta_y && mouse.pos.y > y-delta_y)){
 				++hits;
@@ -540,106 +543,7 @@ int main(void) {
 			bordercolor(0);
 		}
 
-		/*y2=y;
-		if(y>baseline){
 
-			//POKE(COLOUR_RAM + offset , colour);
-
-
-			gotoxy(x,y);
-			putchar(0xA0);
-			//y2= 
-			while((y2-baseline)>0){
-				gotoxy(1,1);
-				printf("y2:%d",y2);
-				gotoxy(x,y2);
-				putchar(0xA0);
-				//POKE(CHAR_RAM + offset , 0xA0);
-				--y2;
-
-			}
-
-		}
-		else{
-
-		}
-		*/
-			//wx = y % 2;
-
-			/*
-			if(wx==0){
-				if(wxp1==1){
-					//0xAC
-					POKE(CHAR_RAM + offset , 0xAC);
-					POKE(COLOUR_RAM + offset , colour);
-				}
-				else if (wxp1==2){
-					POKE(0xC7 , 0x12);//Reverse on
-					//REV
-					//0xE1
-					POKE(CHAR_RAM + offset , 0xE1);
-					POKE(COLOUR_RAM + offset , colour);
-					POKE(0xC7 , 0);//Reverse off
-
-				}
-				//0xA0
-				POKE(CHAR_RAM + offset , 0xA0);
-				POKE(COLOUR_RAM + offset , colour);
-			}
-			else if(wx==1){
-				if(wxp1==1){
-					//0xA2
-					POKE(CHAR_RAM + offset , 0xA2);
-					POKE(COLOUR_RAM + offset , colour);
-
-				}
-				else if (wxp1==2){
-					//REV
-					//0xBE
-					POKE(0xC7 , 0x12);//Reverse on
-					POKE(CHAR_RAM + offset , 0xBE);
-					POKE(COLOUR_RAM + offset , colour);
-					POKE(0xC7 , 0);//Reverse off
-				}
-				//0xBB
-				POKE(CHAR_RAM + offset , 0xBB);
-				POKE(COLOUR_RAM + offset , colour);
-			}
-			else if(wx==2){
-				if(wxp1==1){
-					//REV
-					//0xBC
-					POKE(0xC7 , 0x12);//Reverse on
-					POKE(CHAR_RAM + offset , 0xBC);
-					POKE(COLOUR_RAM + offset , colour);
-					POKE(0xC7 , 0);//Reverse off
-				}
-				else if(wxp1==2){
-					//REV
-					//0xA0
-					POKE(0xC7 , 0x12);//Reverse on
-					POKE(CHAR_RAM + offset , 0xA0);
-					POKE(COLOUR_RAM + offset , colour);
-					POKE(0xC7 , 0);//Reverse off
-				}
-				//0xA1
-				POKE(CHAR_RAM + offset , 0xA1);
-				POKE(COLOUR_RAM + offset , colour);	
-
-			}
-			*/
-		//}
-		/*offset = offset + 40;
-		if(offset>1000){offset=0;}
-		*/
-
-		//colour++;
-		//if(colour>15){colour=0;}
-
-
-
-		//putc(block[i]);
-	
 
 
 		xp1=xp1+x_step;
@@ -657,7 +561,7 @@ int main(void) {
 
 		x=x+1;
 		//xp1=x+1;
-		if(x>39){
+		if(x>SCREEN_W){
 			x=0;
 			colour++;
 			if(colour>15){colour=1;}
@@ -685,7 +589,7 @@ int main(void) {
 		while(time_now<time_step){
 			time_now = (PEEK(160)*65536)+(PEEK(161)*256+PEEK(162));
 		}
-		time_step=(PEEK(160)*65536)+(PEEK(161)*256+PEEK(162))+step_size;
+		time_step=time_now+step_size;
 		
 
 	}

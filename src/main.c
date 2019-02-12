@@ -4,9 +4,8 @@
 #include <cbm.h>
 #include <mouse.h>
 #include <string.h>
-#include "vickers.h"
-
 #include <peekpoke.h>
+#include "main.h"
 
 #define KEY_F1  0x85
 #define KEY_F3  0x86
@@ -35,8 +34,8 @@ unsigned short misses=0;
 unsigned short misses_max=4;
 unsigned short level=1;
 unsigned short level_max=15;
-unsigned short step_size=10;
-unsigned short step_max=10;
+unsigned short step_size=6;
+unsigned short step_max=6;
 unsigned char baseline=12;
 unsigned char tail_length=8;
 unsigned char delta_x=25;
@@ -63,6 +62,9 @@ static const unsigned char CursorSprite[64] = {
 0x26,0xeb,0x98,0x09,0xbe,0x60,0x02,0x69,
 0x80,0x00,0x96,0x00,0x00,0x28,0x00,0x86
 };
+
+unsigned int SIDSIZE = (1024)*8; 			//8kb should be more than enough
+unsigned int SIDLOAD = 0x4000;				//Make sure you offset your sid at $4000 using sidereloc -p 40
 
 
 /*
@@ -157,6 +159,11 @@ int main(void) {
 
 	//unsigned char tail_colour[8] = { 0x9a, 0x9F, 0x05, 0x9e, 0x81, 0x1C, 0x95, 0x97 };
 	unsigned char tail_colour[8] = { 14, 3, 1, 7, 8, 2, 9, 11 };
+
+
+
+
+
 
 	POKE( 53272,23);//UPPER CASE/PETSCII MODE
 	clrscr();
@@ -282,6 +289,13 @@ int main(void) {
 		gotoxy(x,baseline);
 		putchar(0xC0);
 	}*/
+
+
+	memcpy((void*)(SIDLOAD),(void*)&SIDFILE,SIDSIZE);	//Load music into memory 
+	SIDINIT(); 						//Init SID
+	SIDPLAY();						//Play 
+
+
 
 	//Turn on the screen again
 	POKE(0xd011, PEEK(0xd011) | 0x10);
@@ -491,9 +505,12 @@ int main(void) {
 		}while(n<tail_length);
 
         mouse_info (&mouse);
-        //gotoxy (0, 2);
-        //cprintf (" X  = %3d\r\n", mouse.pos.x);
-        //cprintf (" Y  = %3d\r\n", mouse.pos.y);
+        gotoxy (0, 2);
+        //cprintf (" x  = %3d\r\n", mouse.pos.x);
+        //cprintf (" y  = %3d\r\n", mouse.pos.y);
+        cprintf (" x  = %3d\r\n", PEEK(0xd419));
+        cprintf (" y  = %3d\r\n", PEEK(0xd41A));
+  		mouse_move ( PEEK(0xd419), PEEK(0xd41A));
 
         x2=tail[1][0]*8;
         y=tail[1][1]*8;
